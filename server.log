@@ -1,7 +1,0 @@
-Running in MOCK mode (simulated OBD data)
-[2026/02/09 21:16:23:2736] E: Scandir on ':/usr/local/cuda-13.0/lib64' failed, errno 2
-Starting arrowbd2 on port 9997
-Open http://localhost:9997 in your browser
-Initializing ELM327...
-ELM327 ready
-Shutting down...
