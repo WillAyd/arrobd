@@ -1,0 +1,2 @@
+option('mock_mode', type : 'boolean', value : false,
+       description : 'Use mock serial instead of real hardware')

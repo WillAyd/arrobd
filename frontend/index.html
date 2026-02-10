@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ArrowBD2 — Live OBD-2 Dashboard</title>
+<link rel="stylesheet" crossorigin="anonymous"
+  href="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/css/themes.css" />
+<script type="module"
+  src="https://cdn.jsdelivr.net/npm/@finos/perspective/dist/cdn/perspective.js"></script>
+<script type="module"
+  src="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/cdn/perspective-viewer.js"></script>
+<script type="module"
+  src="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js"></script>
+<script type="module"
+  src="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer-d3fc/dist/cdn/perspective-viewer-d3fc.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; }
+  perspective-viewer { height: 100%; width: 100%; }
+</style>
+</head>
+<body>
+<perspective-viewer id="viewer" theme="Pro Dark"></perspective-viewer>
+<script type="module">
+  import perspective from "https://cdn.jsdelivr.net/npm/@finos/perspective/dist/cdn/perspective.js";
+
+  const viewer = document.getElementById("viewer");
+  const worker = await perspective.worker();
+  let table = null;
+
+  const ws = new WebSocket(`ws://${location.host}`, "obd");
+  ws.binaryType = "arraybuffer";
+
+  ws.onopen = () => console.log("WebSocket connected");
+  ws.onclose = () => console.log("WebSocket closed");
+  ws.onerror = (e) => console.error("WebSocket error", e);
+
+  ws.onmessage = async (event) => {
+    const arrow = new Uint8Array(event.data);
+    if (!table) {
+      table = await worker.table(arrow);
+      await viewer.load(table);
+      await viewer.restore({
+        plugin: "Y Line",
+        group_by: [],
+        split_by: [],
+        columns: ["rpm", "speed_kmh", "throttle_pct"],
+        sort: [["timestamp_ms", "asc"]],
+        plugin_config: {},
+      });
+    } else {
+      table.update(arrow);
+    }
+  };
+</script>
+</body>
+</html>

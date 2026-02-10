@@ -1,0 +1,20 @@
+# Build directories
+builddir*/
+build/
+
+# Meson wrap downloaded sources
+subprojects/apache-arrow-*/
+subprojects/libwebsockets-*/
+subprojects/gflags-*/
+subprojects/packagecache/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+compile_commands.json
+
+# OS
+.DS_Store
