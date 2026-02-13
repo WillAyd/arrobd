@@ -1,5 +1,6 @@
 #include "ws_server.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace obd {

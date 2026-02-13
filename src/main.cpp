@@ -38,13 +38,21 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   href="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/css/themes.css" />
 <style>
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; }
-  perspective-viewer { height: 100%; width: 100%; }
+  #dashboard { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100%; width: 100%; }
+  #speed { grid-column: 1; grid-row: 1; }
+  #throttle { grid-column: 2; grid-row: 1; }
+  #rpm { grid-column: 1 / -1; grid-row: 2; }
+  perspective-viewer { width: 100%; height: 100%; }
   #status { position: fixed; top: 8px; right: 12px; color: #888; font: 12px monospace; z-index: 999; }
 </style>
 </head>
 <body>
 <div id="status">Loading Perspective...</div>
-<perspective-viewer id="viewer" theme="Pro Dark"></perspective-viewer>
+<div id="dashboard">
+  <perspective-viewer id="speed" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="throttle" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="rpm" theme="Pro Dark"></perspective-viewer>
+</div>
 <script type="module">
   const status = document.getElementById("status");
 
@@ -59,7 +67,11 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
 
   status.textContent = "Perspective loaded. Connecting WebSocket...";
 
-  const viewer = document.getElementById("viewer");
+  const viewers = [
+    { el: document.getElementById("speed"), columns: ["speed_kmh"] },
+    { el: document.getElementById("throttle"), columns: ["throttle_pct"] },
+    { el: document.getElementById("rpm"), columns: ["rpm"] },
+  ];
   const worker = await perspective.worker();
   let table = null;
   let msgCount = 0;
@@ -78,12 +90,14 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     try {
       if (!table) {
         table = await worker.table(arrow);
-        await viewer.load(table);
-        await viewer.restore({
-          plugin: "Y Line",
-          columns: ["rpm", "speed_kmh", "throttle_pct"],
-          sort: [["timestamp_ms", "asc"]],
-        });
+        for (const v of viewers) {
+          await v.el.load(table);
+          await v.el.restore({
+            plugin: "Y Line",
+            columns: v.columns,
+            sort: [["timestamp_ms", "asc"]],
+          });
+        }
       } else {
         table.update(arrow);
       }
