@@ -37,26 +37,81 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
 <link rel="stylesheet" crossorigin="anonymous"
   href="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/css/themes.css" />
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; }
-  #dashboard { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100%; width: 100%; }
-  #speed { grid-column: 1; grid-row: 1; }
-  #throttle { grid-column: 2; grid-row: 1; }
-  #rpm { grid-column: 1 / -1; grid-row: 2; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; color: #ccc; font-family: sans-serif; }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; height: 40px; background: #12122a; border-bottom: 1px solid #333; }
+  #status { color: #888; font: 12px monospace; }
+  .tab-bar { display: flex; gap: 4px; }
+  .tab-bar button {
+    background: transparent; border: none; color: #888; font: 14px sans-serif;
+    padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
+  }
+  .tab-bar button:hover { color: #bbb; }
+  .tab-bar button.active { color: #fff; border-bottom-color: #5b8def; }
+  .tab-panel { display: none; height: calc(100% - 40px); }
+  .tab-panel.active { display: grid; }
+  #tab-performance { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+  #tab-performance .full-width { grid-column: 1 / -1; }
+  #tab-engine { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  #tab-fuel { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+  #tab-diagnostics { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
   perspective-viewer { width: 100%; height: 100%; }
-  #status { position: fixed; top: 8px; right: 12px; color: #888; font: 12px monospace; z-index: 999; }
 </style>
 </head>
 <body>
-<div id="status">Loading Perspective...</div>
-<div id="dashboard">
-  <perspective-viewer id="speed" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="throttle" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="rpm" theme="Pro Dark"></perspective-viewer>
+<div id="header">
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('performance')">Performance</button>
+    <button onclick="switchTab('engine')">Engine Health</button>
+    <button onclick="switchTab('fuel')">Fuel &amp; Air</button>
+    <button onclick="switchTab('diagnostics')">Diagnostics</button>
+  </div>
+  <div id="status">Loading Perspective...</div>
 </div>
+
+<div id="tab-performance" class="tab-panel active">
+  <perspective-viewer id="v-speed" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-rpm" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-throttle" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-load" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-timing" class="full-width" theme="Pro Dark"></perspective-viewer>
+</div>
+
+<div id="tab-engine" class="tab-panel">
+  <perspective-viewer id="v-coolant" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-intake-temp" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-voltage" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-runtime" theme="Pro Dark"></perspective-viewer>
+</div>
+
+<div id="tab-fuel" class="tab-panel">
+  <perspective-viewer id="v-maf" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-fuel-pressure" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-intake-manifold" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-short-trim" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-long-trim" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-fuel-level" theme="Pro Dark"></perspective-viewer>
+</div>
+
+<div id="tab-diagnostics" class="tab-panel">
+  <perspective-viewer id="v-ambient-temp" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-barometric" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-dist-mil" theme="Pro Dark"></perspective-viewer>
+  <perspective-viewer id="v-dist-cleared" theme="Pro Dark"></perspective-viewer>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
+    const panel = document.getElementById("tab-" + name);
+    panel.classList.add("active");
+    event.currentTarget.classList.add("active");
+    panel.querySelectorAll("perspective-viewer").forEach(v => v.notifyResize());
+  }
+</script>
 <script type="module">
   const status = document.getElementById("status");
 
-  // Import Perspective components
   const [perspectiveMod] = await Promise.all([
     import("https://cdn.jsdelivr.net/npm/@finos/perspective/dist/cdn/perspective.js"),
     import("https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/cdn/perspective-viewer.js"),
@@ -68,9 +123,25 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   status.textContent = "Perspective loaded. Connecting WebSocket...";
 
   const viewers = [
-    { el: document.getElementById("speed"), columns: ["speed_kmh"] },
-    { el: document.getElementById("throttle"), columns: ["throttle_pct"] },
-    { el: document.getElementById("rpm"), columns: ["rpm"] },
+    { el: document.getElementById("v-speed"), columns: ["speed_kmh"] },
+    { el: document.getElementById("v-rpm"), columns: ["rpm"] },
+    { el: document.getElementById("v-throttle"), columns: ["throttle_pct"] },
+    { el: document.getElementById("v-load"), columns: ["engine_load_pct"] },
+    { el: document.getElementById("v-timing"), columns: ["timing_advance_deg"] },
+    { el: document.getElementById("v-coolant"), columns: ["coolant_temp_c"] },
+    { el: document.getElementById("v-intake-temp"), columns: ["intake_air_temp_c"] },
+    { el: document.getElementById("v-voltage"), columns: ["control_module_voltage_v"] },
+    { el: document.getElementById("v-runtime"), columns: ["runtime_s"] },
+    { el: document.getElementById("v-maf"), columns: ["maf_gps"] },
+    { el: document.getElementById("v-fuel-pressure"), columns: ["fuel_pressure_kpa"] },
+    { el: document.getElementById("v-intake-manifold"), columns: ["intake_manifold_kpa"] },
+    { el: document.getElementById("v-short-trim"), columns: ["short_fuel_trim_pct"] },
+    { el: document.getElementById("v-long-trim"), columns: ["long_fuel_trim_pct"] },
+    { el: document.getElementById("v-fuel-level"), columns: ["fuel_level_pct"] },
+    { el: document.getElementById("v-ambient-temp"), columns: ["ambient_air_temp_c"] },
+    { el: document.getElementById("v-barometric"), columns: ["barometric_pressure_kpa"] },
+    { el: document.getElementById("v-dist-mil"), columns: ["distance_with_mil_km"] },
+    { el: document.getElementById("v-dist-cleared"), columns: ["distance_since_cleared_km"] },
   ];
   const worker = await perspective.worker();
   let table = null;

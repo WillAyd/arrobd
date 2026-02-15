@@ -91,6 +91,66 @@ std::string MockSerial::generate_response(std::string_view command) {
         return format_elm_response(0x41, 0x10,
                                    {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
     }
+    if (command == "010E") {
+        timing_advance_ = random_walk(timing_advance_, 12.0, 2.0, -64.0, 63.5);
+        uint8_t raw = static_cast<uint8_t>((timing_advance_ + 64.0) * 2.0);
+        return format_elm_response(0x41, 0x0E, {raw});
+    }
+    if (command == "010A") {
+        fuel_pressure_ = random_walk(fuel_pressure_, 250.0, 10.0, 0.0, 765.0);
+        uint8_t raw = static_cast<uint8_t>(fuel_pressure_ / 3.0);
+        return format_elm_response(0x41, 0x0A, {raw});
+    }
+    if (command == "010B") {
+        intake_manifold_ = random_walk(intake_manifold_, 35.0, 3.0, 0.0, 255.0);
+        return format_elm_response(0x41, 0x0B, {static_cast<uint8_t>(intake_manifold_)});
+    }
+    if (command == "0106") {
+        short_fuel_trim_ = random_walk(short_fuel_trim_, 0.0, 2.0, -100.0, 99.2);
+        uint8_t raw = static_cast<uint8_t>((short_fuel_trim_ + 100.0) * 1.28);
+        return format_elm_response(0x41, 0x06, {raw});
+    }
+    if (command == "0107") {
+        long_fuel_trim_ = random_walk(long_fuel_trim_, 0.0, 1.0, -100.0, 99.2);
+        uint8_t raw = static_cast<uint8_t>((long_fuel_trim_ + 100.0) * 1.28);
+        return format_elm_response(0x41, 0x07, {raw});
+    }
+    if (command == "011F") {
+        runtime_ += 1.0;
+        uint16_t raw = static_cast<uint16_t>(std::clamp(runtime_, 0.0, 65535.0));
+        return format_elm_response(0x41, 0x1F,
+                                   {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
+    }
+    if (command == "0121") {
+        distance_with_mil_ = random_walk(distance_with_mil_, 0.0, 0.1, 0.0, 65535.0);
+        uint16_t raw = static_cast<uint16_t>(distance_with_mil_);
+        return format_elm_response(0x41, 0x21,
+                                   {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
+    }
+    if (command == "012F") {
+        fuel_level_ = random_walk(fuel_level_, 65.0, 0.5, 0.0, 100.0);
+        return format_elm_response(0x41, 0x2F, {static_cast<uint8_t>(fuel_level_ * 255.0 / 100.0)});
+    }
+    if (command == "0131") {
+        distance_since_cleared_ = random_walk(distance_since_cleared_, 5000.0, 1.0, 0.0, 65535.0);
+        uint16_t raw = static_cast<uint16_t>(distance_since_cleared_);
+        return format_elm_response(0x41, 0x31,
+                                   {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
+    }
+    if (command == "0133") {
+        barometric_pressure_ = random_walk(barometric_pressure_, 101.0, 0.5, 70.0, 110.0);
+        return format_elm_response(0x41, 0x33, {static_cast<uint8_t>(barometric_pressure_)});
+    }
+    if (command == "0142") {
+        control_module_voltage_ = random_walk(control_module_voltage_, 14.0, 0.2, 10.0, 16.0);
+        uint16_t raw = static_cast<uint16_t>(control_module_voltage_ * 1000.0);
+        return format_elm_response(0x41, 0x42,
+                                   {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
+    }
+    if (command == "0146") {
+        ambient_air_temp_ = random_walk(ambient_air_temp_, 22.0, 0.5, -40.0, 60.0);
+        return format_elm_response(0x41, 0x46, {static_cast<uint8_t>(ambient_air_temp_ + 40.0)});
+    }
 
     return "NO DATA\r\r>";
 }
