@@ -33,6 +33,18 @@ private:
     double throttle_ = 15.0;
     double intake_temp_ = 25.0;
     double maf_ = 3.0;
+    double timing_advance_ = 10.0;
+    double fuel_pressure_ = 250.0;
+    double intake_manifold_ = 35.0;
+    double short_fuel_trim_ = 0.0;
+    double long_fuel_trim_ = 0.0;
+    double runtime_ = 0.0;
+    double distance_with_mil_ = 0.0;
+    double fuel_level_ = 65.0;
+    double distance_since_cleared_ = 5000.0;
+    double barometric_pressure_ = 101.0;
+    double control_module_voltage_ = 14.0;
+    double ambient_air_temp_ = 22.0;
 
     double random_walk(double current, double mean, double step, double min_val, double max_val);
 };
