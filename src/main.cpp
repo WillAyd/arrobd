@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#ifdef ARROWBD2_MOCK
+#ifdef ARROBD_MOCK
 #include "mock_serial.h"
 #endif
 #include "pipeline.h"
@@ -33,7 +33,7 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ArrowBD2 — Live OBD-2 Dashboard</title>
+<title>arrobd — Live OBD-II Dashboard</title>
 <link rel="stylesheet" crossorigin="anonymous"
   href="https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/css/themes.css" />
 <style>
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
 
     // Create serial port
     std::unique_ptr<obd::ISerial> serial;
-#ifdef ARROWBD2_MOCK
+#ifdef ARROBD_MOCK
     std::cerr << "Running in MOCK mode (simulated OBD data)\n";
     serial = std::make_unique<obd::MockSerial>();
 #else
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     if (!serial->open(device, baud)) {
-#ifndef ARROWBD2_MOCK
+#ifndef ARROBD_MOCK
         std::cerr << "Failed to open serial device: " << device << "\n";
         return 1;
 #endif
@@ -241,7 +241,7 @@ int main(int argc, char* argv[]) {
     pipe_opts.poll_interval_ms = poll_ms;
     obd::Pipeline pipeline(*serial, server, pipe_opts);
 
-    std::cerr << "Starting arrowbd2 on port " << port << "\n";
+    std::cerr << "Starting arrobd on port " << port << "\n";
     std::cerr << "Open http://localhost:" << port << " in your browser\n";
 
     // Start OBD polling thread
