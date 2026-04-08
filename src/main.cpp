@@ -241,6 +241,21 @@ int main(int argc, char* argv[]) {
     pipe_opts.poll_interval_ms = poll_ms;
     obd::Pipeline pipeline(*serial, server, pipe_opts);
 
+    server.set_on_command([&pipeline](const std::string& msg) {
+        // Parse {"poll_interval_ms": N}
+        auto pos = msg.find("\"poll_interval_ms\"");
+        if (pos == std::string::npos) return;
+        pos = msg.find(':', pos);
+        if (pos == std::string::npos) return;
+        pos++;
+        while (pos < msg.size() && (msg[pos] == ' ' || msg[pos] == '\t')) pos++;
+        int val = std::atoi(msg.c_str() + pos);
+        if (val >= 50 && val <= 5000) {
+            pipeline.set_poll_interval(val);
+            std::cerr << "Poll interval changed to " << val << "ms\n";
+        }
+    });
+
     std::cerr << "Starting arrobd on port " << port << "\n";
     std::cerr << "Open http://localhost:" << port << " in your browser\n";
 
