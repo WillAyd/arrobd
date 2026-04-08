@@ -17,18 +17,16 @@ public:
     Pipeline(ISerial& serial, WsServer& server, const PipelineOptions& opts);
     ~Pipeline();
 
-    // Start the OBD polling thread
     void start();
-
-    // Stop the polling thread and wait for it to join
     void stop();
+    void set_poll_interval(int ms);
 
 private:
     void poll_loop();
 
     ISerial& serial_;
     WsServer& server_;
-    PipelineOptions opts_;
+    std::atomic<int> poll_interval_ms_;
     std::atomic<bool> running_{false};
     std::thread thread_;
 };

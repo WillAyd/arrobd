@@ -14,7 +14,7 @@
 namespace obd {
 
 Pipeline::Pipeline(ISerial& serial, WsServer& server, const PipelineOptions& opts)
-    : serial_(serial), server_(server), opts_(opts) {}
+    : serial_(serial), server_(server), poll_interval_ms_(opts.poll_interval_ms) {}
 
 Pipeline::~Pipeline() { stop(); }
 
@@ -26,6 +26,10 @@ void Pipeline::start() {
 void Pipeline::stop() {
     running_ = false;
     if (thread_.joinable()) thread_.join();
+}
+
+void Pipeline::set_poll_interval(int ms) {
+    poll_interval_ms_.store(ms);
 }
 
 void Pipeline::poll_loop() {
@@ -92,7 +96,7 @@ void Pipeline::poll_loop() {
         auto& buffer = *buf_result;
         server_.broadcast_binary(buffer->data(), static_cast<size_t>(buffer->size()));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(opts_.poll_interval_ms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(poll_interval_ms_.load()));
     }
 }
 
