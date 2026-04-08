@@ -47,7 +47,15 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   }
   .tab-bar button:hover { color: #bbb; }
   .tab-bar button.active { color: #fff; border-bottom-color: #5b8def; }
-  .tab-panel { display: none; height: calc(100% - 40px); }
+  #controls { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 36px; background: #0e0e22; border-bottom: 1px solid #282840; }
+  #controls button, #controls select {
+    background: #1e1e3a; border: 1px solid #3a3a5c; color: #ccc; font: 12px sans-serif;
+    padding: 4px 12px; border-radius: 4px; cursor: pointer;
+  }
+  #controls button:hover, #controls select:hover { border-color: #5b8def; color: #fff; }
+  #controls label { color: #888; font: 12px sans-serif; }
+  #btn-pause.paused { background: #2a4a2a; border-color: #4a8f4a; }
+  .tab-panel { display: none; height: calc(100% - 76px); }
   .tab-panel.active { display: grid; }
   #tab-performance { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
   #tab-performance .full-width { grid-column: 1 / -1; }
@@ -66,6 +74,27 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     <button onclick="switchTab('diagnostics')">Diagnostics</button>
   </div>
   <div id="status">Loading Perspective...</div>
+</div>
+<div id="controls">
+  <button id="btn-pause" onclick="togglePause()">Pause</button>
+  <label>Poll rate:
+    <select id="sel-poll" onchange="changePollRate(this.value)">
+      <option value="100">100ms</option>
+      <option value="200" selected>200ms</option>
+      <option value="500">500ms</option>
+      <option value="1000">1s</option>
+      <option value="2000">2s</option>
+    </select>
+  </label>
+  <label>History:
+    <select id="sel-history" onchange="changeHistory(this.value)">
+      <option value="0" selected>All</option>
+      <option value="30">30s</option>
+      <option value="60">1 min</option>
+      <option value="300">5 min</option>
+    </select>
+  </label>
+  <button id="btn-reset" onclick="resetCharts()">Reset</button>
 </div>
 
 <div id="tab-performance" class="tab-panel active">
@@ -100,6 +129,8 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
 </div>
 
 <script>
+  let paused = false;
+
   function switchTab(name) {
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
@@ -107,6 +138,28 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     panel.classList.add("active");
     event.currentTarget.classList.add("active");
     panel.querySelectorAll("perspective-viewer").forEach(v => v.notifyResize());
+  }
+
+  function togglePause() {
+    paused = !paused;
+    const btn = document.getElementById("btn-pause");
+    btn.textContent = paused ? "Resume" : "Pause";
+    btn.classList.toggle("paused", paused);
+  }
+
+  function changePollRate(val) {
+    if (window._obdWs && window._obdWs.readyState === WebSocket.OPEN) {
+      window._obdWs.send(JSON.stringify({ poll_interval_ms: parseInt(val) }));
+    }
+  }
+
+  function changeHistory(seconds) {
+    window._historySeconds = parseInt(seconds);
+    window._needsTableRecreate = true;
+  }
+
+  function resetCharts() {
+    window._needsTableRecreate = true;
   }
 </script>
 <script type="module">
@@ -147,8 +200,36 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   let table = null;
   let msgCount = 0;
 
+  window._historySeconds = 0;
+  window._needsTableRecreate = false;
+
+  function getTableLimit() {
+    if (window._historySeconds === 0) return undefined;
+    const pollMs = parseInt(document.getElementById("sel-poll").value) || 200;
+    return Math.round((window._historySeconds * 1000) / pollMs);
+  }
+
+  async function recreateTable(arrow) {
+    if (table) {
+      for (const v of viewers) await v.el.reset();
+      await table.delete();
+      table = null;
+    }
+    const limit = getTableLimit();
+    table = await worker.table(arrow, limit ? { limit } : {});
+    for (const v of viewers) {
+      await v.el.load(table);
+      await v.el.restore({
+        plugin: "Y Line",
+        columns: v.columns,
+        sort: [["timestamp_ms", "asc"]],
+      });
+    }
+  }
+
   const ws = new WebSocket("ws://" + location.host, "obd");
   ws.binaryType = "arraybuffer";
+  window._obdWs = ws;
 
   ws.onopen = () => { status.textContent = "Connected"; };
   ws.onclose = () => { status.textContent = "Disconnected"; };
@@ -158,17 +239,11 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     msgCount++;
     const arrow = new Uint8Array(event.data);
     status.textContent = "Messages: " + msgCount + " (" + arrow.length + " bytes)";
+    if (paused) return;
     try {
-      if (!table) {
-        table = await worker.table(arrow);
-        for (const v of viewers) {
-          await v.el.load(table);
-          await v.el.restore({
-            plugin: "Y Line",
-            columns: v.columns,
-            sort: [["timestamp_ms", "asc"]],
-          });
-        }
+      if (!table || window._needsTableRecreate) {
+        window._needsTableRecreate = false;
+        await recreateTable(arrow);
       } else {
         table.update(arrow);
       }
