@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 300" width="840" height="300">
+  <defs>
+    <radialGradient id="gaugeBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </radialGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2ecc71"/>
+      <stop offset="50%" stop-color="#f39c12"/>
+      <stop offset="100%" stop-color="#e74c3c"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e74c3c"/>
+      <stop offset="100%" stop-color="#ff6b6b"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Full background -->
+  <rect x="0" y="0" width="840" height="300" rx="12" fill="#0f0f1a"/>
+
+  <!-- === TACHOMETER at center (150, 150), radius 130 === -->
+  <g>
+    <!-- Gauge face -->
+    <circle cx="150" cy="150" r="130" fill="url(#gaugeBg)" stroke="#2a2a4a" stroke-width="2.5"/>
+
+    <!-- Outer gauge arc (green to red, 225deg to -45deg) -->
+    <!-- r=115, center 150,150 -->
+    <!-- 225deg: x=150+115*cos(225)=68.7, y=150+115*sin(225)=68.7 -->
+    <!-- -45deg same as 315deg: x=150+115*cos(-45)=231.3, y=150+115*sin(-45)=68.7... wait -->
+    <!-- For SVG: 225deg from 3-o'clock = lower-left, 315deg = lower-right -->
+    <!-- 225deg: x=150+115*cos(225*pi/180)=150-81.3=68.7, y=150+115*sin(225*pi/180)=150+81.3=231.3 -->
+    <!-- 315deg: x=150+115*cos(315*pi/180)=150+81.3=231.3, y=150+115*sin(315*pi/180)=150+81.3=231.3 -->
+    <!-- Sweep goes counter-clockwise from 225 through top to 315 = large arc -->
+    <path d="M 68.7 231.3 A 115 115 0 1 1 231.3 231.3"
+          fill="none" stroke="url(#ringGrad)" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+
+    <!-- Red zone arc (roughly last 30% of sweep, from ~7000rpm onward) -->
+    <!-- ~from 340deg to 315deg going clockwise, i.e. from about x=150+115*cos(-10deg), etc -->
+    <!-- Simpler: from roughly 2 o'clock to 5 o'clock position -->
+    <path d="M 231.0 72.0 A 115 115 0 0 1 231.3 231.3"
+          fill="none" stroke="#e74c3c" stroke-width="6" stroke-linecap="round" opacity="0.35"/>
+
+    <!-- Major tick marks (r_outer=120, r_inner=106) around 270deg sweep -->
+    <g stroke="#8899aa" stroke-width="1.8" opacity="0.6" filter="url(#glow)">
+      <!-- 0: 225deg -->
+      <line x1="65.1" y1="234.9" x2="75.1" y2="224.9"/>
+      <!-- 1: 252deg -->
+      <line x1="41.5" y1="186.8" x2="53.9" y2="189.9"/>
+      <!-- 2: 279deg -->
+      <line x1="30.2" y1="131.8" x2="43.0" y2="132.8"/>
+      <!-- 3: 306deg -->
+      <line x1="46.8" y1="79.5" x2="58.0" y2="84.5"/>
+      <!-- 4: 333deg -->
+      <line x1="87.8" y1="40.5" x2="95.8" y2="49.7"/>
+      <!-- 5: 360deg (0deg) -->
+      <line x1="150.0" y1="30.0" x2="150.0" y2="44.0"/>
+      <!-- 6: 27deg -->
+      <line x1="212.2" y1="40.5" x2="204.2" y2="49.7"/>
+      <!-- 7: 54deg -->
+      <line x1="253.2" y1="79.5" x2="242.0" y2="84.5"/>
+      <!-- 8: 81deg -->
+      <line x1="269.8" y1="131.8" x2="257.0" y2="132.8"/>
+      <!-- 9: 108deg -->
+      <line x1="258.5" y1="186.8" x2="246.1" y2="189.9"/>
+      <!-- 10: 315deg from start = -45deg -->
+      <line x1="234.9" y1="234.9" x2="224.9" y2="224.9"/>
+    </g>
+
+    <!-- Number labels (r=98) -->
+    <g font-family="'Arial', sans-serif" font-size="13" fill="#aabbcc" text-anchor="middle" font-weight="bold">
+      <text x="78" y="228">0</text>
+      <text x="50" y="182">1</text>
+      <text x="40" y="130">2</text>
+      <text x="56" y="80">3</text>
+      <text x="95" y="46">4</text>
+      <text x="150" y="35">5</text>
+      <text x="206" y="46">6</text>
+      <text x="247" y="80" fill="#e74c3c">7</text>
+      <text x="262" y="130" fill="#e74c3c">8</text>
+      <text x="252" y="182" fill="#e74c3c">9</text>
+      <text x="224" y="228" fill="#e74c3c">10</text>
+    </g>
+
+    <!-- RPM label -->
+    <text x="150" y="210" text-anchor="middle" font-family="'Courier New', monospace"
+          font-size="10" fill="#556677" letter-spacing="2">x1000 RPM</text>
+
+    <!-- Center hub -->
+    <circle cx="150" cy="150" r="12" fill="#2a2a4a" stroke="#445566" stroke-width="1.5"/>
+    <circle cx="150" cy="150" r="5" fill="#e74c3c"/>
+
+    <!-- Needle with double arrowhead, rotated 45deg around gauge center -->
+    <g transform="rotate(45, 150, 150)">
+      <!-- Shaft -->
+      <polygon points="150,42 146,145 150,140 154,145"
+               fill="url(#arrowGrad)" opacity="0.95"/>
+      <!-- First arrowhead -->
+      <polygon points="150,26 141,50 150,42 159,50"
+               fill="#e74c3c"/>
+      <!-- Second arrowhead (Apache Arrow double-chevron) -->
+      <polygon points="150,46 143,64 150,57 157,64"
+               fill="#ff6b6b" opacity="0.7"/>
+    </g>
+  </g>
+
+  <!-- === RIGHT SIDE: Text, starting well clear of gauge (gauge ends at x=280) === -->
+
+  <!-- Project name -->
+  <text x="560" y="148" text-anchor="middle" font-family="'Courier New', monospace"
+        font-size="68" fill="#ffffff" font-weight="bold" letter-spacing="8">ARROBD</text>
+
+  <!-- Tagline -->
+  <text x="560" y="182" text-anchor="middle" font-family="'Arial', sans-serif"
+        font-size="15" fill="#667788" letter-spacing="4">REAL-TIME OBD-II TELEMETRY</text>
+
+  <!-- Separator line -->
+  <line x1="420" y1="198" x2="700" y2="198" stroke="#2a2a4a" stroke-width="1"/>
+
+  <!-- Arrow data-flow chevrons -->
+  <g transform="translate(520, 215)" opacity="0.25">
+    <polygon points="0,8 8,0 8,6 24,6 24,10 8,10 8,16" fill="#4fc3f7"/>
+    <polygon points="30,8 38,0 38,6 54,6 54,10 38,10 38,16" fill="#4fc3f7"/>
+    <polygon points="60,8 68,0 68,6 84,6 84,10 68,10 68,16" fill="#4fc3f7"/>
+  </g>
+</svg>
