@@ -1,4 +1,4 @@
-project('arrowbd2', 'cpp', 'c',
+project('arrobd', 'cpp', 'c',
   version : '0.1.0',
   default_options : ['cpp_std=c++23', 'warning_level=2'])
 
@@ -22,9 +22,9 @@ if mock_mode
   src += files('src/mock_serial.cpp')
 endif
 
-executable('arrowbd2', src,
+executable('arrobd', src,
   dependencies : [arrow_dep, lws_dep, thread_dep],
-  cpp_args : mock_mode ? ['-DARROWBD2_MOCK=1'] : [],
+  cpp_args : mock_mode ? ['-DARROBD_MOCK=1'] : [],
 )
 
 subdir('test')

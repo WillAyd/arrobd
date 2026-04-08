@@ -20,7 +20,7 @@ Dependencies (Apache Arrow and libwebsockets) can be resolved via system package
 Connect an ELM327 adapter to your vehicle's OBD-II port and plug it into your machine via USB.
 
 ```bash
-./builddir/arrowbd2
+./builddir/arrobd
 ```
 
 Then open http://localhost:8080 in your browser to view the live dashboard.
@@ -41,7 +41,7 @@ To run without hardware (simulated OBD data):
 ```bash
 meson setup builddir -Dmock_mode=true
 meson compile -C builddir
-./builddir/arrowbd2
+./builddir/arrobd
 ```
 
 ## License
