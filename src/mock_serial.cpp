@@ -122,7 +122,7 @@ std::string MockSerial::generate_response(std::string_view command) {
                                    {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
     }
     if (command == "0121") {
-        distance_with_mil_ = random_walk(distance_with_mil_, 0.0, 0.1, 0.0, 65535.0);
+        distance_with_mil_ = random_walk(distance_with_mil_, 1200.0, 1.0, 0.0, 65535.0);
         uint16_t raw = static_cast<uint16_t>(distance_with_mil_);
         return format_elm_response(0x41, 0x21,
                                    {static_cast<uint8_t>(raw >> 8), static_cast<uint8_t>(raw & 0xFF)});
