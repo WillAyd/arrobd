@@ -39,6 +39,7 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a1a2e; color: #ccc; font-family: sans-serif; }
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; height: 40px; background: #12122a; border-bottom: 1px solid #333; }
+  #header .logo { height: 28px; margin-right: 8px; }
   #status { color: #888; font: 12px monospace; }
   .tab-bar { display: flex; gap: 4px; }
   .tab-bar button {
@@ -47,14 +48,25 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   }
   .tab-bar button:hover { color: #bbb; }
   .tab-bar button.active { color: #fff; border-bottom-color: #5b8def; }
-  .tab-panel { display: none; height: calc(100% - 40px); }
+  #controls { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 36px; background: #0e0e22; border-bottom: 1px solid #282840; }
+  #controls button, #controls select, #controls input {
+    background: #1e1e3a; border: 1px solid #3a3a5c; color: #ccc; font: 12px sans-serif;
+    padding: 4px 12px; border-radius: 4px; cursor: pointer;
+  }
+  #controls button:hover, #controls select:hover, #controls input:hover { border-color: #5b8def; color: #fff; }
+  #controls label { color: #888; font: 12px sans-serif; }
+  #btn-pause.paused { background: #2a4a2a; border-color: #4a8f4a; }
+  .tab-panel { display: none; height: calc(100% - 76px); }
   .tab-panel.active { display: grid; }
   #tab-performance { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
   #tab-performance .full-width { grid-column: 1 / -1; }
   #tab-engine { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  #tab-engine .full-width { grid-column: 1 / -1; }
   #tab-fuel { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
   #tab-diagnostics { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-  perspective-viewer { width: 100%; height: 100%; }
+  .chart-cell { display: flex; flex-direction: column; overflow: hidden; }
+  .chart-title { color: #aaa; font: 600 13px sans-serif; padding: 6px 8px 2px; background: #12122a; white-space: nowrap; text-align: center; }
+  perspective-viewer { width: 100%; flex: 1; min-height: 0; --d3fc-label--color: transparent; }
 </style>
 </head>
 <body>
@@ -67,39 +79,53 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   </div>
   <div id="status">Loading Perspective...</div>
 </div>
+<div id="controls">
+  <button id="btn-pause" onclick="togglePause()">Pause</button>
+  <label>Poll rate:
+    <select id="sel-poll" onchange="changePollRate(this.value)">
+      <option value="100">100ms</option>
+      <option value="200" selected>200ms</option>
+      <option value="500">500ms</option>
+      <option value="1000">1s</option>
+      <option value="2000">2s</option>
+    </select>
+  </label>
+  <button id="btn-reset" onclick="resetCharts()">Reset</button>
+</div>
 
 <div id="tab-performance" class="tab-panel active">
-  <perspective-viewer id="v-speed" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-rpm" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-throttle" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-load" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-timing" class="full-width" theme="Pro Dark"></perspective-viewer>
+  <div class="chart-cell"><div class="chart-title">Speed (km/h)</div><perspective-viewer id="v-speed" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">RPM</div><perspective-viewer id="v-rpm" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Throttle (%)</div><perspective-viewer id="v-throttle" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Engine Load (%)</div><perspective-viewer id="v-load" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell full-width"><div class="chart-title">Timing Advance (&deg;)</div><perspective-viewer id="v-timing" theme="Pro Dark"></perspective-viewer></div>
 </div>
 
 <div id="tab-engine" class="tab-panel">
-  <perspective-viewer id="v-coolant" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-intake-temp" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-voltage" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-runtime" theme="Pro Dark"></perspective-viewer>
+  <div class="chart-cell"><div class="chart-title">Coolant Temp (&deg;C)</div><perspective-viewer id="v-coolant" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Intake Air Temp (&deg;C)</div><perspective-viewer id="v-intake-temp" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell full-width"><div class="chart-title">Control Module Voltage (V)</div><perspective-viewer id="v-voltage" theme="Pro Dark"></perspective-viewer></div>
 </div>
 
 <div id="tab-fuel" class="tab-panel">
-  <perspective-viewer id="v-maf" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-fuel-pressure" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-intake-manifold" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-short-trim" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-long-trim" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-fuel-level" theme="Pro Dark"></perspective-viewer>
+  <div class="chart-cell"><div class="chart-title">MAF (g/s)</div><perspective-viewer id="v-maf" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Fuel Pressure (kPa)</div><perspective-viewer id="v-fuel-pressure" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Intake Manifold (kPa)</div><perspective-viewer id="v-intake-manifold" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Short Fuel Trim (%)</div><perspective-viewer id="v-short-trim" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Long Fuel Trim (%)</div><perspective-viewer id="v-long-trim" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Fuel Level (%)</div><perspective-viewer id="v-fuel-level" theme="Pro Dark"></perspective-viewer></div>
 </div>
 
 <div id="tab-diagnostics" class="tab-panel">
-  <perspective-viewer id="v-ambient-temp" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-barometric" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-dist-mil" theme="Pro Dark"></perspective-viewer>
-  <perspective-viewer id="v-dist-cleared" theme="Pro Dark"></perspective-viewer>
+  <div class="chart-cell"><div class="chart-title">Ambient Air Temp (&deg;C)</div><perspective-viewer id="v-ambient-temp" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Barometric Pressure (kPa)</div><perspective-viewer id="v-barometric" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Distance w/ MIL (km)</div><perspective-viewer id="v-dist-mil" theme="Pro Dark"></perspective-viewer></div>
+  <div class="chart-cell"><div class="chart-title">Distance Since Cleared (km)</div><perspective-viewer id="v-dist-cleared" theme="Pro Dark"></perspective-viewer></div>
 </div>
 
 <script>
+  var paused = false;
+
   function switchTab(name) {
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".tab-bar button").forEach(b => b.classList.remove("active"));
@@ -107,6 +133,24 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     panel.classList.add("active");
     event.currentTarget.classList.add("active");
     panel.querySelectorAll("perspective-viewer").forEach(v => v.notifyResize());
+  }
+
+  function togglePause() {
+    paused = !paused;
+    const btn = document.getElementById("btn-pause");
+    btn.textContent = paused ? "Resume" : "Pause";
+    btn.classList.toggle("paused", paused);
+  }
+
+  function changePollRate(val) {
+    if (window._obdWs && window._obdWs.readyState === WebSocket.OPEN) {
+      window._obdWs.send(JSON.stringify({ poll_interval_ms: parseInt(val) }));
+      window._needsTableRecreate = true;
+    }
+  }
+
+  function resetCharts() {
+    window._needsTableRecreate = true;
   }
 </script>
 <script type="module">
@@ -131,7 +175,6 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     { el: document.getElementById("v-coolant"), columns: ["coolant_temp_c"] },
     { el: document.getElementById("v-intake-temp"), columns: ["intake_air_temp_c"] },
     { el: document.getElementById("v-voltage"), columns: ["control_module_voltage_v"] },
-    { el: document.getElementById("v-runtime"), columns: ["runtime_s"] },
     { el: document.getElementById("v-maf"), columns: ["maf_gps"] },
     { el: document.getElementById("v-fuel-pressure"), columns: ["fuel_pressure_kpa"] },
     { el: document.getElementById("v-intake-manifold"), columns: ["intake_manifold_kpa"] },
@@ -147,8 +190,25 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
   let table = null;
   let msgCount = 0;
 
+  window._needsTableRecreate = false;
+
+  async function recreateTable(arrow) {
+    const oldTable = table;
+    table = await worker.table(arrow);
+    for (const v of viewers) {
+      await v.el.load(table);
+      await v.el.restore({
+        plugin: "Y Line",
+        columns: v.columns,
+        sort: [["timestamp_ms", "asc"]],
+      });
+    }
+    if (oldTable) await oldTable.delete();
+  }
+
   const ws = new WebSocket("ws://" + location.host, "obd");
   ws.binaryType = "arraybuffer";
+  window._obdWs = ws;
 
   ws.onopen = () => { status.textContent = "Connected"; };
   ws.onclose = () => { status.textContent = "Disconnected"; };
@@ -158,17 +218,20 @@ static constexpr const char* INDEX_HTML = R"html(<!DOCTYPE html>
     msgCount++;
     const arrow = new Uint8Array(event.data);
     status.textContent = "Messages: " + msgCount + " (" + arrow.length + " bytes)";
+    if (paused) return;
     try {
       if (!table) {
+        await recreateTable(arrow);
+      } else if (window._needsTableRecreate) {
+        window._needsTableRecreate = false;
+        const configs = await Promise.all(viewers.map(v => v.el.save()));
+        const oldTable = table;
         table = await worker.table(arrow);
-        for (const v of viewers) {
-          await v.el.load(table);
-          await v.el.restore({
-            plugin: "Y Line",
-            columns: v.columns,
-            sort: [["timestamp_ms", "asc"]],
-          });
+        for (let i = 0; i < viewers.length; i++) {
+          await viewers[i].el.load(table);
+          await viewers[i].el.restore(configs[i]);
         }
+        if (oldTable) await oldTable.delete();
       } else {
         table.update(arrow);
       }
@@ -240,6 +303,21 @@ int main(int argc, char* argv[]) {
     obd::PipelineOptions pipe_opts;
     pipe_opts.poll_interval_ms = poll_ms;
     obd::Pipeline pipeline(*serial, server, pipe_opts);
+
+    server.set_on_command([&pipeline](const std::string& msg) {
+        // Parse {"poll_interval_ms": N}
+        auto pos = msg.find("\"poll_interval_ms\"");
+        if (pos == std::string::npos) return;
+        pos = msg.find(':', pos);
+        if (pos == std::string::npos) return;
+        pos++;
+        while (pos < msg.size() && (msg[pos] == ' ' || msg[pos] == '\t')) pos++;
+        int val = std::atoi(msg.c_str() + pos);
+        if (val >= 50 && val <= 5000) {
+            pipeline.set_poll_interval(val);
+            std::cerr << "Poll interval changed to " << val << "ms\n";
+        }
+    });
 
     std::cerr << "Starting arrobd on port " << port << "\n";
     std::cerr << "Open http://localhost:" << port << " in your browser\n";

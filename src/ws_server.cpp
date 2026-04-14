@@ -66,7 +66,7 @@ int WsServer::callback_http(struct lws* wsi, enum lws_callback_reasons reason,
 }
 
 int WsServer::callback_ws(struct lws* wsi, enum lws_callback_reasons reason,
-                           void* user, void* /*in*/, size_t /*len*/) {
+                           void* user, void* in, size_t len) {
     auto* pss = static_cast<PerSessionData*>(user);
 
     switch (reason) {
@@ -97,6 +97,14 @@ int WsServer::callback_ws(struct lws* wsi, enum lws_callback_reasons reason,
                          server->pending_payload_len_, LWS_WRITE_BINARY);
             }
             if (pss) pss->has_pending = false;
+            break;
+        }
+        case LWS_CALLBACK_RECEIVE: {
+            auto* server = get_server(wsi);
+            if (server && server->on_command_ && in && len > 0) {
+                std::string msg(static_cast<const char*>(in), len);
+                server->on_command_(msg);
+            }
             break;
         }
         case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
@@ -186,5 +194,9 @@ void WsServer::broadcast_binary(const uint8_t* data, size_t len) {
 }
 
 void WsServer::set_index_html(std::string html) { index_html_ = std::move(html); }
+
+void WsServer::set_on_command(std::function<void(const std::string&)> cb) {
+    on_command_ = std::move(cb);
+}
 
 }  // namespace obd

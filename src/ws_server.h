@@ -33,6 +33,9 @@ public:
     // Set the HTML content to serve on GET /
     void set_index_html(std::string html);
 
+    // Set callback invoked when a text message is received from a client
+    void set_on_command(std::function<void(const std::string&)> cb);
+
     // Public for C callback registration in protocols array
     static int callback_http(struct lws* wsi, enum lws_callback_reasons reason,
                              void* user, void* in, size_t len);
@@ -60,6 +63,9 @@ private:
 
     // Index HTML content
     std::string index_html_;
+
+    // Command callback
+    std::function<void(const std::string&)> on_command_;
 };
 
 }  // namespace obd
